@@ -1,0 +1,9 @@
+name: Buildalon Setup StreamCmd
+description: A GitHub Action to setup the steamcmd command alias.
+branding:
+  color: 'red'
+  icon: 'terminal'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+  post: 'dist/index.js'
