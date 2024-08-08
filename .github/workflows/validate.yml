@@ -1,0 +1,31 @@
+name: validate
+on:
+  schedule:
+    - cron: '0 0 * * 0' # every sunday at midnight
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - '*'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.ref }}
+jobs:
+  validate:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ macos-latest, windows-latest, ubuntu-latest ]
+    steps:
+      - uses: actions/checkout@v4
+      - name: buildalon/setup-steamcmd
+        uses: ./
+      - run: |
+          echo "STEAM_CMD: $STEAM_CMD"
+          echo "STEAM_DIR: $STEAM_DIR"
+          which steamcmd > /dev/null
+          steamcmd +login anonymous +help +quit
+        shell: bash

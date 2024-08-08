@@ -1,0 +1,33 @@
+{
+  "name": "setup-steamcmd",
+  "version": "1.0.0",
+  "description": "A GitHub Action to setup the steamcmd command alias.",
+  "author": "buildalon",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buildalon/setup-steamcmd.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/buildalon/setup-steamcmd/issues"
+  },
+  "homepage": "https://github.com/buildalon/setup-steamcmd",
+  "main": "dist/index.js",
+  "keywords": [
+    "steamcmd",
+    "github",
+    "actions"
+  ],
+  "dependencies": {
+    "@actions/core": "^1.10.1",
+    "@actions/exec": "^1.1.1",
+    "@actions/tool-cache": "^2.0.1"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.34.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npm install && npm ci && ncc build src/index.js -o dist --source-map --license licenses.txt"
+  }
+}
