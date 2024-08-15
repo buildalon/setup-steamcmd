@@ -1,8 +1,8 @@
-const path = require('path');
-const core = require('@actions/core');
-const tc = require('@actions/tool-cache');
-const exec = require('@actions/exec');
-const fs = require('fs').promises;
+import tc = require('@actions/tool-cache');
+import core = require('@actions/core');
+import exec = require('@actions/exec');
+import path = require('path');
+import fs = require('fs');
 
 const steamcmd = 'steamcmd';
 const STEAM_CMD = 'STEAM_CMD';
@@ -14,7 +14,7 @@ const IS_WINDOWS = process.platform === 'win32';
 const toolExtension = IS_WINDOWS ? '.exe' : '.sh';
 const toolPath = `${steamcmd}${toolExtension}`;
 
-async function Run() {
+async function Run(): Promise<void> {
     const [toolDirectory, steamDir] = await findOrDownload();
     core.debug(`${STEAM_CMD} -> ${toolDirectory}`);
     core.addPath(toolDirectory);
@@ -23,13 +23,13 @@ async function Run() {
     core.debug(`${STEAM_DIR} -> ${steamDir}`);
     core.exportVariable(STEAM_DIR, steamDir);
     const steam_temp = path.join(process.env.RUNNER_TEMP, '.steamworks');
-    fs.mkdir(steam_temp);
+    await fs.promises.mkdir(steam_temp);
     core.debug(`${STEAM_TEMP} -> ${steam_temp}`);
     core.exportVariable(STEAM_TEMP, steam_temp);
     await exec.exec(steamcmd, ['+help', '+quit']);
 }
 
-async function findOrDownload() {
+async function findOrDownload(): Promise<[string, string]> {
     const allVersions = tc.findAllVersions(steamcmd);
     core.debug(`Found versions: ${allVersions}`);
     let toolDirectory = undefined;
@@ -61,8 +61,8 @@ async function findOrDownload() {
         tool = path.join(downloadDirectory, toolPath);
         if (IS_LINUX) {
             const exe = path.join(downloadDirectory, steamcmd);
-            await fs.writeFile(exe, `#!/bin/bash\nexec "${tool}" "$@"`);
-            await fs.chmod(exe, 0o755);
+            await fs.promises.writeFile(exe, `#!/bin/bash\nexec "${tool}" "$@"`);
+            await fs.promises.chmod(exe, 0o755);
         }
         const downloadVersion = await getVersion(tool);
         core.debug(`Setting tool cache: ${downloadDirectory} | ${steamcmd} | ${downloadVersion}`);
@@ -70,13 +70,13 @@ async function findOrDownload() {
     } else {
         tool = path.join(toolDirectory, toolPath);
     }
-    fs.access(tool);
+    await fs.promises.access(tool);
     core.debug(`Found ${tool} in ${toolDirectory}`);
-    const steamDir = getSteamDir(toolDirectory);
+    const steamDir = await getSteamDir(toolDirectory);
     return [toolDirectory, steamDir];
 }
 
-function getDownloadUrl() {
+function getDownloadUrl(): [string, string] {
     let archiveName = undefined;
     switch (process.platform) {
         case 'linux':
@@ -94,14 +94,14 @@ function getDownloadUrl() {
     return [`https://steamcdn-a.akamaihd.net/client/installer/${archiveName}`, archiveName];
 }
 
-function getTempDirectory() {
+function getTempDirectory(): string {
     const tempDirectory = process.env['RUNNER_TEMP'] || ''
     return tempDirectory
 }
 
-async function getVersion(tool) {
+async function getVersion(tool: string): Promise<string> {
     let output = '';
-    await exec.exec(tool, '+quit', {
+    await exec.exec(tool, [`+quit`], {
         listeners: {
             stdout: (data) => {
                 output += data.toString();
@@ -122,7 +122,7 @@ async function getVersion(tool) {
     return version
 }
 
-function getSteamDir(toolDirectory) {
+async function getSteamDir(toolDirectory: string): Promise<string> {
     let steamDir = undefined;
     switch (process.platform) {
         case 'linux':
@@ -135,13 +135,12 @@ function getSteamDir(toolDirectory) {
             steamDir = toolDirectory;
             break;
     }
-    // check if steam directory exists and create if not
     try {
-        fs.access(steamDir);
+        await fs.promises.access(steamDir);
     } catch (error) {
         if (error.code === 'ENOENT') {
             core.debug(`Creating steam directory: ${steamDir}`);
-            fs.mkdir(steamDir);
+            await fs.promises.mkdir(steamDir);
         } else {
             throw error;
         }
@@ -150,4 +149,4 @@ function getSteamDir(toolDirectory) {
     return steamDir;
 }
 
-module.exports = { Run }
+export { Run }
