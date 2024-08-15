@@ -28778,54 +28778,66 @@ exports["default"] = _default;
 
 /***/ }),
 
-/***/ 1751:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ 1517:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PrintLogs = PrintLogs;
 const core = __nccwpck_require__(2186);
-const fs = __nccwpck_require__(3292);
+const fs = __nccwpck_require__(7147);
 const excludedPaths = ['steambootstrapper', 'appcache', 'steamapps'];
-
 async function PrintLogs(directory, clear = false) {
     core.info(directory);
     try {
-        const files = await fs.readdir(directory, { recursive: true });
+        const files = await fs.promises.readdir(directory, { recursive: true });
         for (const file of files) {
             try {
                 const fullPath = `${directory}/${file}`;
-                const stat = await fs.stat(fullPath);
-                if (!stat.isFile()) { continue; }
-                if (!/\.(log|txt|vdf)$/.test(file)) { continue }
-                if (excludedPaths.some(excluded => fullPath.includes(excluded))) { continue; }
-                const logContent = await fs.readFile(fullPath, 'utf8');
-                core.info(`::group::${file}`);
-                core.info(logContent);
-                core.info('::endgroup::');
-                if (clear && fullPath.includes('logs')) {
-                    await fs.unlink(fullPath);
+                const stat = await fs.promises.stat(fullPath);
+                if (!stat.isFile()) {
+                    continue;
                 }
-            } catch (error) {
+                if (!/\.(log|txt|vdf)$/.test(file)) {
+                    continue;
+                }
+                if (excludedPaths.some(excluded => fullPath.includes(excluded))) {
+                    continue;
+                }
+                const logContent = await fs.promises.readFile(fullPath, 'utf8');
+                core.startGroup(file);
+                core.info(logContent);
+                core.endGroup();
+                if (clear && fullPath.includes('logs')) {
+                    await fs.promises.unlink(fullPath);
+                }
+            }
+            catch (error) {
                 core.error(`Failed to read log: ${file}\n${error.message}`);
             }
         }
-    } catch (error) {
+    }
+    catch (error) {
         core.error(`Failed to read logs in ${directory}!\n${error.message}`);
     }
 }
 
-module.exports = { PrintLogs }
-
 
 /***/ }),
 
-/***/ 7521:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ 8429:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
-const path = __nccwpck_require__(1017);
-const core = __nccwpck_require__(2186);
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Run = Run;
 const tc = __nccwpck_require__(7784);
+const core = __nccwpck_require__(2186);
 const exec = __nccwpck_require__(1514);
-const fs = (__nccwpck_require__(7147).promises);
-
+const path = __nccwpck_require__(1017);
+const fs = __nccwpck_require__(7147);
 const steamcmd = 'steamcmd';
 const STEAM_CMD = 'STEAM_CMD';
 const STEAM_DIR = 'STEAM_DIR';
@@ -28835,7 +28847,6 @@ const IS_MAC = process.platform === 'darwin';
 const IS_WINDOWS = process.platform === 'win32';
 const toolExtension = IS_WINDOWS ? '.exe' : '.sh';
 const toolPath = `${steamcmd}${toolExtension}`;
-
 async function Run() {
     const [toolDirectory, steamDir] = await findOrDownload();
     core.debug(`${STEAM_CMD} -> ${toolDirectory}`);
@@ -28845,12 +28856,11 @@ async function Run() {
     core.debug(`${STEAM_DIR} -> ${steamDir}`);
     core.exportVariable(STEAM_DIR, steamDir);
     const steam_temp = path.join(process.env.RUNNER_TEMP, '.steamworks');
-    fs.mkdir(steam_temp);
+    await fs.promises.mkdir(steam_temp);
     core.debug(`${STEAM_TEMP} -> ${steam_temp}`);
     core.exportVariable(STEAM_TEMP, steam_temp);
     await exec.exec(steamcmd, ['+help', '+quit']);
 }
-
 async function findOrDownload() {
     const allVersions = tc.findAllVersions(steamcmd);
     core.debug(`Found versions: ${allVersions}`);
@@ -28870,7 +28880,8 @@ async function findOrDownload() {
         let downloadDirectory = path.join(getTempDirectory(), steamcmd);
         if (IS_WINDOWS) {
             downloadDirectory = await tc.extractZip(archivePath, downloadDirectory);
-        } else {
+        }
+        else {
             downloadDirectory = await tc.extractTar(archivePath, downloadDirectory);
         }
         if (!downloadDirectory) {
@@ -28883,21 +28894,21 @@ async function findOrDownload() {
         tool = path.join(downloadDirectory, toolPath);
         if (IS_LINUX) {
             const exe = path.join(downloadDirectory, steamcmd);
-            await fs.writeFile(exe, `#!/bin/bash\nexec "${tool}" "$@"`);
-            await fs.chmod(exe, 0o755);
+            await fs.promises.writeFile(exe, `#!/bin/bash\nexec "${tool}" "$@"`);
+            await fs.promises.chmod(exe, 0o755);
         }
         const downloadVersion = await getVersion(tool);
         core.debug(`Setting tool cache: ${downloadDirectory} | ${steamcmd} | ${downloadVersion}`);
         toolDirectory = await tc.cacheDir(downloadDirectory, steamcmd, downloadVersion);
-    } else {
+    }
+    else {
         tool = path.join(toolDirectory, toolPath);
     }
-    fs.access(tool);
+    await fs.promises.access(tool);
     core.debug(`Found ${tool} in ${toolDirectory}`);
-    const steamDir = getSteamDir(toolDirectory);
+    const steamDir = await getSteamDir(toolDirectory);
     return [toolDirectory, steamDir];
 }
-
 function getDownloadUrl() {
     let archiveName = undefined;
     switch (process.platform) {
@@ -28915,15 +28926,13 @@ function getDownloadUrl() {
     }
     return [`https://steamcdn-a.akamaihd.net/client/installer/${archiveName}`, archiveName];
 }
-
 function getTempDirectory() {
-    const tempDirectory = process.env['RUNNER_TEMP'] || ''
-    return tempDirectory
+    const tempDirectory = process.env['RUNNER_TEMP'] || '';
+    return tempDirectory;
 }
-
 async function getVersion(tool) {
     let output = '';
-    await exec.exec(tool, '+quit', {
+    await exec.exec(tool, [`+quit`], {
         listeners: {
             stdout: (data) => {
                 output += data.toString();
@@ -28941,10 +28950,9 @@ async function getVersion(tool) {
         throw new Error('Failed to parse version');
     }
     core.debug(`Found version: ${version}`);
-    return version
+    return version;
 }
-
-function getSteamDir(toolDirectory) {
+async function getSteamDir(toolDirectory) {
     let steamDir = undefined;
     switch (process.platform) {
         case 'linux':
@@ -28957,22 +28965,21 @@ function getSteamDir(toolDirectory) {
             steamDir = toolDirectory;
             break;
     }
-    // check if steam directory exists and create if not
     try {
-        fs.access(steamDir);
-    } catch (error) {
+        await fs.promises.access(steamDir);
+    }
+    catch (error) {
         if (error.code === 'ENOENT') {
             core.debug(`Creating steam directory: ${steamDir}`);
-            fs.mkdir(steamDir);
-        } else {
+            await fs.promises.mkdir(steamDir);
+        }
+        else {
             throw error;
         }
     }
     core.debug(`Steam directory: ${steamDir}`);
     return steamDir;
 }
-
-module.exports = { Run }
 
 
 /***/ }),
@@ -29054,14 +29061,6 @@ module.exports = require("events");
 
 "use strict";
 module.exports = require("fs");
-
-/***/ }),
-
-/***/ 3292:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("fs/promises");
 
 /***/ }),
 
@@ -30889,34 +30888,38 @@ module.exports = parseParams
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
+// This entry need to be wrapped in an IIFE because it need to be in strict mode.
 (() => {
+"use strict";
+var exports = __webpack_exports__;
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __nccwpck_require__(2186);
-const logging = __nccwpck_require__(1751);
-const setup = __nccwpck_require__(7521);
-
+const logging = __nccwpck_require__(1517);
+const setup = __nccwpck_require__(8429);
 const IsPost = !!core.getState('isPost');
-
 const main = async () => {
     if (!IsPost) {
         core.saveState('isPost', 'true');
         core.info('Setup steamcmd...');
         try {
             await setup.Run();
-        } catch (error) {
+        }
+        catch (error) {
             core.setFailed(error);
         }
-    } else {
+    }
+    else {
         core.info('steamcmd logs:');
         await logging.PrintLogs(process.env.STEAM_TEMP);
         if (process.platform === 'win32') {
             await logging.PrintLogs(process.env.STEAM_CMD, true);
-        } else {
+        }
+        else {
             await logging.PrintLogs(process.env.STEAM_DIR, true);
         }
     }
-}
-
+};
 main();
 
 })();

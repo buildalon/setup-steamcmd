@@ -1,6 +1,6 @@
-const core = require('@actions/core');
-const logging = require('./logging');
-const setup = require('./setup');
+import core = require('@actions/core');
+import logging = require('./logging');
+import setup = require('./setup');
 
 const IsPost = !!core.getState('isPost');
 
