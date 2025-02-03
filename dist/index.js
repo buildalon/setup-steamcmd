@@ -28846,6 +28846,7 @@ const core = __nccwpck_require__(2186);
 const exec = __nccwpck_require__(1514);
 const path = __nccwpck_require__(1017);
 const fs = __nccwpck_require__(7147);
+const os = __nccwpck_require__(2037);
 const steamcmd = 'steamcmd';
 const STEAM_CMD = 'STEAM_CMD';
 const STEAM_DIR = 'STEAM_DIR';
@@ -28962,12 +28963,13 @@ async function getVersion(tool) {
 }
 async function getSteamDir(toolDirectory) {
     let steamDir = undefined;
+    const homeDir = os.homedir();
     switch (process.platform) {
         case 'linux':
-            steamDir = '/home/runner/Steam';
+            steamDir = `${homeDir}/Steam`;
             break;
         case 'darwin':
-            steamDir = '/Users/runner/Library/Application Support/Steam';
+            steamDir = `${homeDir}/Library/Application Support/Steam`;
             break;
         default:
             steamDir = toolDirectory;
