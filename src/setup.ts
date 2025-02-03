@@ -3,6 +3,7 @@ import core = require('@actions/core');
 import exec = require('@actions/exec');
 import path = require('path');
 import fs = require('fs');
+import os = require('os');
 
 const steamcmd = 'steamcmd';
 const STEAM_CMD = 'STEAM_CMD';
@@ -124,12 +125,13 @@ async function getVersion(tool: string): Promise<string> {
 
 async function getSteamDir(toolDirectory: string): Promise<string> {
     let steamDir = undefined;
+    const homeDir = os.homedir();
     switch (process.platform) {
         case 'linux':
-            steamDir = '/home/runner/Steam';
+            steamDir = `${homeDir}/Steam`;
             break;
         case 'darwin':
-            steamDir = '/Users/runner/Library/Application Support/Steam';
+            steamDir = `${homeDir}/Library/Application Support/Steam`;
             break;
         default:
             steamDir = toolDirectory;
