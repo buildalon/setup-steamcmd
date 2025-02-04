@@ -68,7 +68,7 @@ async function findOrDownload(): Promise<[string, string]> {
     }
     if (IS_LINUX) {
         const exe = path.join(toolDirectory, steamcmd);
-        core.info(`Creating ${exe} to point to ${tool}`);
+        core.debug(`Creating ${exe} to point to ${tool}`);
         try {
             await fs.promises.access(exe);
             await fs.promises.unlink(exe);
@@ -82,7 +82,7 @@ async function findOrDownload(): Promise<[string, string]> {
         await fs.promises.access(exe, fs.constants.X_OK);
     }
     await fs.promises.access(tool, fs.constants.X_OK);
-    core.info(`Found ${tool} in ${toolDirectory}`);
+    core.debug(`Found ${tool} in ${toolDirectory}`);
     const steamDir = await getSteamDir(toolDirectory);
     return [toolDirectory, steamDir];
 }
