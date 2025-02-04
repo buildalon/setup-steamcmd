@@ -28901,11 +28901,6 @@ async function findOrDownload() {
         }
         core.debug(`Successfully extracted ${steamcmd} to ${downloadDirectory}`);
         tool = path.join(downloadDirectory, toolPath);
-        if (IS_LINUX) {
-            const exe = path.join(downloadDirectory, steamcmd);
-            await fs.promises.writeFile(exe, `#!/bin/bash\nexec "${tool}" "$@"`);
-            await fs.promises.chmod(exe, 0o777);
-        }
         const downloadVersion = await getVersion(tool);
         core.debug(`Setting tool cache: ${downloadDirectory} | ${steamcmd} | ${downloadVersion}`);
         toolDirectory = await tc.cacheDir(downloadDirectory, steamcmd, downloadVersion);
@@ -28913,7 +28908,23 @@ async function findOrDownload() {
     else {
         tool = path.join(toolDirectory, toolPath);
     }
-    await fs.promises.access(tool);
+    if (IS_LINUX) {
+        const exe = path.join(toolDirectory, steamcmd);
+        core.info(`Creating ${exe} to point to ${tool}`);
+        try {
+            await fs.promises.access(exe);
+            await fs.promises.unlink(exe);
+        }
+        catch (error) {
+            if (error.code !== 'ENOENT') {
+                throw error;
+            }
+        }
+        await fs.promises.writeFile(exe, `#!/bin/bash\nexec "${tool}" "$@"`);
+        await fs.promises.chmod(exe, 0o777);
+        await fs.promises.access(exe, fs.constants.X_OK);
+    }
+    await fs.promises.access(tool, fs.constants.X_OK);
     core.debug(`Found ${tool} in ${toolDirectory}`);
     const steamDir = await getSteamDir(toolDirectory);
     return [toolDirectory, steamDir];
