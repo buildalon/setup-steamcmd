@@ -28858,15 +28858,15 @@ const toolExtension = IS_WINDOWS ? '.exe' : '.sh';
 const toolPath = `${steamcmd}${toolExtension}`;
 async function Run() {
     const [toolDirectory, steamDir] = await findOrDownload();
-    core.debug(`${STEAM_CMD} -> ${toolDirectory}`);
+    core.info(`${STEAM_CMD} -> ${toolDirectory}`);
     core.addPath(toolDirectory);
     const steam_cmd = path.join(toolDirectory, steamcmd, '..');
     core.exportVariable(STEAM_CMD, steam_cmd);
-    core.debug(`${STEAM_DIR} -> ${steamDir}`);
+    core.info(`${STEAM_DIR} -> ${steamDir}`);
     core.exportVariable(STEAM_DIR, steamDir);
     const steam_temp = path.join(process.env.RUNNER_TEMP, '.steamworks');
     await fs.promises.mkdir(steam_temp);
-    core.debug(`${STEAM_TEMP} -> ${steam_temp}`);
+    core.info(`${STEAM_TEMP} -> ${steam_temp}`);
     core.exportVariable(STEAM_TEMP, steam_temp);
     await exec.exec(steamcmd, ['+help', '+quit']);
 }
@@ -28925,7 +28925,7 @@ async function findOrDownload() {
         await fs.promises.access(exe, fs.constants.X_OK);
     }
     await fs.promises.access(tool, fs.constants.X_OK);
-    core.debug(`Found ${tool} in ${toolDirectory}`);
+    core.info(`Found ${tool} in ${toolDirectory}`);
     const steamDir = await getSteamDir(toolDirectory);
     return [toolDirectory, steamDir];
 }
