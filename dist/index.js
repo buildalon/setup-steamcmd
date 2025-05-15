@@ -66063,6 +66063,7 @@ const core = __nccwpck_require__(2186);
 const exec = __nccwpck_require__(1514);
 const path = __nccwpck_require__(1017);
 const fs = __nccwpck_require__(7147);
+const os = __nccwpck_require__(2037);
 const steamcmd = 'steamcmd';
 const STEAM_CMD = 'STEAM_CMD';
 const STEAM_DIR = 'STEAM_DIR';
@@ -66195,7 +66196,19 @@ async function getVersion(tool) {
     return version;
 }
 async function getSteamDir(toolDirectory) {
-    let steamDir = toolDirectory;
+    let steamDir = undefined;
+    const homeDir = os.homedir();
+    switch (process.platform) {
+        case 'linux':
+            steamDir = `${homeDir}/Steam`;
+            break;
+        case 'darwin':
+            steamDir = `${homeDir}/Library/Application Support/Steam`;
+            break;
+        default:
+            steamDir = toolDirectory;
+            break;
+    }
     try {
         await fs.promises.access(steamDir, fs.constants.R_OK | fs.constants.W_OK);
     }
@@ -66220,6 +66233,7 @@ async function restoreConfigCache(steamDir) {
         ]);
         if (cacheKey) {
             core.info(`Restored cache: ${cacheKey}`);
+            core.saveState('steamcmd-config-cacheKey', cacheKey);
         }
         else {
             core.info(`No cache found for ${cachePaths}`);
@@ -66234,18 +66248,23 @@ async function SaveConfigCache() {
         core.warning('STEAM_DIR is not set, skipping cache save');
         return;
     }
+    let cacheKey = core.getState('steamcmd-config-cacheKey');
+    if (cacheKey) {
+        core.info(`cache for "${cacheKey}" already exists, skipping cache save`);
+        return;
+    }
     try {
         const cachePaths = path.join(process.env.STEAM_DIR, 'config');
         try {
             await fs.promises.access(cachePaths, fs.constants.R_OK | fs.constants.W_OK);
         }
         catch (error) {
-            await fs.promises.mkdir(cachePaths, { recursive: true });
-            core.info(`Created cache directory: ${cachePaths}`);
+            core.warning(`Cache path ${cachePaths} does not exist, skipping cache save`);
+            return;
         }
-        const cacheKey = await cache.saveCache([cachePaths], `steamcmd-config-${process.platform}-${process.arch}`);
-        if (cacheKey) {
-            core.info(`Saved cache: ${cacheKey}`);
+        const cacheId = await cache.saveCache([cachePaths], `steamcmd-config-${process.platform}-${process.arch}`);
+        if (cacheId) {
+            core.info(`Saved cacheId: ${cacheId}`);
         }
         else {
             core.info(`No cache saved for ${cachePaths}`);
