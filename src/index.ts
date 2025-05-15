@@ -1,6 +1,7 @@
 import core = require('@actions/core');
 import logging = require('./logging');
 import setup = require('./setup');
+import { SaveConfigCache } from './setup';
 
 const IsPost = !!core.getState('isPost');
 
@@ -14,6 +15,7 @@ const main = async () => {
             core.setFailed(error);
         }
     } else {
+        await SaveConfigCache();
         core.info('steamcmd logs:');
         await logging.PrintLogs(process.env.STEAM_TEMP);
         if (process.platform === 'win32') {

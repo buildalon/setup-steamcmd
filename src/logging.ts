@@ -9,7 +9,8 @@ export async function PrintLogs(directory: string, clear = false): Promise<void>
             'steambootstrapper',
             'appcache',
             'steamapps',
-            'Steam.AppBundle'
+            'Steam.AppBundle',
+            'siteserverui'
         ];
         for (const path of paths) {
             try {

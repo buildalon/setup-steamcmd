@@ -1,9 +1,9 @@
 import tc = require('@actions/tool-cache');
+import cache = require('@actions/cache');
 import core = require('@actions/core');
 import exec = require('@actions/exec');
 import path = require('path');
 import fs = require('fs');
-import os = require('os');
 
 const steamcmd = 'steamcmd';
 const STEAM_CMD = 'STEAM_CMD';
@@ -24,10 +24,15 @@ export async function Run(): Promise<void> {
     core.info(`${STEAM_DIR} -> ${steamDir}`);
     core.exportVariable(STEAM_DIR, steamDir);
     const steam_temp = path.join(process.env.RUNNER_TEMP, '.steamworks');
-    await fs.promises.mkdir(steam_temp);
+    try {
+        await fs.promises.access(steam_temp, fs.constants.R_OK | fs.constants.W_OK);
+    } catch (error) {
+        await fs.promises.mkdir(steam_temp);
+    }
     core.info(`${STEAM_TEMP} -> ${steam_temp}`);
     core.exportVariable(STEAM_TEMP, steam_temp);
     await exec.exec(steamcmd, ['+help', '+quit']);
+    await restoreConfigCache(steamDir);
 }
 
 async function findOrDownload(): Promise<[string, string]> {
@@ -134,21 +139,9 @@ async function getVersion(tool: string): Promise<string> {
 }
 
 async function getSteamDir(toolDirectory: string): Promise<string> {
-    let steamDir = undefined;
-    const homeDir = os.homedir();
-    switch (process.platform) {
-        case 'linux':
-            steamDir = `${homeDir}/Steam`;
-            break;
-        case 'darwin':
-            steamDir = `${homeDir}/Library/Application Support/Steam`;
-            break;
-        default:
-            steamDir = toolDirectory;
-            break;
-    }
+    let steamDir = toolDirectory;
     try {
-        await fs.promises.access(steamDir);
+        await fs.promises.access(steamDir, fs.constants.R_OK | fs.constants.W_OK);
     } catch (error) {
         if (error.code === 'ENOENT') {
             core.debug(`Creating steam directory: ${steamDir}`);
@@ -159,4 +152,45 @@ async function getSteamDir(toolDirectory: string): Promise<string> {
     }
     core.debug(`Steam directory: ${steamDir}`);
     return steamDir;
+}
+
+async function restoreConfigCache(steamDir: string): Promise<void> {
+    try {
+        const cachePaths = path.join(steamDir, 'config');
+        const cacheKey = await cache.restoreCache([cachePaths], `steamcmd-config-${process.platform}-${process.arch}`, [
+            `steamcmd-config-${process.platform}`,
+            `steamcmd-config`
+        ]);
+        if (cacheKey) {
+            core.info(`Restored cache: ${cacheKey}`);
+        } else {
+            core.info(`No cache found for ${cachePaths}`);
+        }
+    } catch (error) {
+        core.error(`Failed to restore cache: ${error.message}`);
+    }
+}
+
+export async function SaveConfigCache(): Promise<void> {
+    if (!process.env.STEAM_DIR) {
+        core.warning('STEAM_DIR is not set, skipping cache save');
+        return;
+    }
+    try {
+        const cachePaths = path.join(process.env.STEAM_DIR, 'config');
+        try {
+            await fs.promises.access(cachePaths, fs.constants.R_OK | fs.constants.W_OK);
+        } catch (error) {
+            await fs.promises.mkdir(cachePaths, { recursive: true });
+            core.info(`Created cache directory: ${cachePaths}`);
+        }
+        const cacheKey = await cache.saveCache([cachePaths], `steamcmd-config-${process.platform}-${process.arch}`);
+        if (cacheKey) {
+            core.info(`Saved cache: ${cacheKey}`);
+        } else {
+            core.info(`No cache saved for ${cachePaths}`);
+        }
+    } catch (error) {
+        core.error(`Failed to save cache: ${error.message}`);
+    }
 }
