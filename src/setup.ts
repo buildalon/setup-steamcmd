@@ -169,8 +169,8 @@ async function getSteamDir(toolDirectory: string): Promise<string> {
 
 async function restoreConfigCache(steamDir: string): Promise<void> {
     try {
-        const cachePaths = path.join(steamDir, 'config');
-        const cacheKey = await cache.restoreCache([cachePaths], `steamcmd-config-${process.platform}-${process.arch}`, [
+        const configVdfPath = path.join(steamDir, 'config', 'config.vdf');
+        const cacheKey = await cache.restoreCache([configVdfPath], `steamcmd-config-${process.platform}-${process.arch}`, [
             `steamcmd-config-${process.platform}`,
             `steamcmd-config`
         ]);
@@ -178,7 +178,7 @@ async function restoreConfigCache(steamDir: string): Promise<void> {
             core.info(`Restored cache: ${cacheKey}`);
             core.saveState('steamcmd-config-cacheKey', cacheKey);
         } else {
-            core.info(`No cache found for ${cachePaths}`);
+            core.info(`No cache found for ${configVdfPath}`);
         }
     } catch (error) {
         core.error(`Failed to restore cache: ${error.message}`);
@@ -196,18 +196,18 @@ export async function SaveConfigCache(): Promise<void> {
         return;
     }
     try {
-        const cachePaths = path.join(process.env.STEAM_DIR, 'config');
+        const configVdfPath = path.join(process.env.STEAM_DIR, 'config', 'config.vdf');
         try {
-            await fs.promises.access(cachePaths, fs.constants.R_OK | fs.constants.W_OK);
+            await fs.promises.access(configVdfPath, fs.constants.R_OK | fs.constants.W_OK);
         } catch (error) {
-            core.warning(`Cache path ${cachePaths} does not exist, skipping cache save`);
+            core.warning(`Cache path ${configVdfPath} does not exist, skipping cache save`);
             return;
         }
-        const cacheId = await cache.saveCache([cachePaths], `steamcmd-config-${process.platform}-${process.arch}`);
+        const cacheId = await cache.saveCache([configVdfPath], `steamcmd-config-${process.platform}-${process.arch}`);
         if (cacheId) {
             core.info(`Saved cacheId: ${cacheId}`);
         } else {
-            core.info(`No cache saved for ${cachePaths}`);
+            core.info(`No cache saved for ${configVdfPath}`);
         }
     } catch (error) {
         core.error(`Failed to save cache: ${error.message}`);
