@@ -3,22 +3,22 @@ on:
   schedule:
     - cron: '0 0 * * 0' # every sunday at midnight
   push:
-    branches:
-      - 'main'
+    branches: ['main']
   pull_request:
-    branches:
-      - '*'
+    branches: ['*']
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 concurrency:
-  group: ${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
 jobs:
   validate:
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
-        os: [ macos-latest, windows-latest, ubuntu-latest ]
+        os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
       - name: buildalon/setup-steamcmd
