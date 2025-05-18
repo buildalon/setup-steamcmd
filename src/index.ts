@@ -17,11 +17,26 @@ const main = async () => {
     } else {
         await SaveConfigCache();
         core.info('steamcmd logs:');
-        await logging.PrintLogs(process.env.STEAM_TEMP);
-        if (process.platform === 'win32') {
-            await logging.PrintLogs(process.env.STEAM_CMD, true);
+        const steam_temp = core.getState('STEAM_TEMP');
+        if (!steam_temp) {
+            core.error('STEAM_TEMP is not set, skipping logs');
         } else {
-            await logging.PrintLogs(process.env.STEAM_DIR, true);
+            await logging.PrintLogs(steam_temp);
+        }
+        if (process.platform === 'win32') {
+            const steamCmd = core.getState('STEAM_CMD');
+            if (!steamCmd) {
+                core.error('STEAM_CMD is not set, skipping logs');
+            } else {
+                await logging.PrintLogs(steamCmd, true);
+            }
+        } else {
+            const steamDir = core.getState('STEAM_DIR');
+            if (!steamDir) {
+                core.error('STEAM_DIR is not set, skipping logs');
+            } else {
+                await logging.PrintLogs(steamDir);
+            }
         }
     }
 }

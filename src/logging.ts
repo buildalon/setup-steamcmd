@@ -27,7 +27,7 @@ export async function PrintLogs(directory: string, clear = false): Promise<void>
                     continue;
                 }
                 if (!/\.(log|txt|vdf)$/.test(path)) {
-                    continue
+                    continue;
                 }
                 const logContent = await fs.promises.readFile(fullPath, 'utf8');
                 core.startGroup(fullPath);

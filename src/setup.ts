@@ -17,13 +17,15 @@ const toolExtension = IS_WINDOWS ? '.exe' : '.sh';
 const toolPath = `${steamcmd}${toolExtension}`;
 
 export async function Run(): Promise<void> {
-    const [toolDirectory, steamDir] = await findOrDownload();
+    const [toolDirectory, steam_dir] = await findOrDownload();
     core.info(`${STEAM_CMD} -> ${toolDirectory}`);
     core.addPath(toolDirectory);
     const steam_cmd = path.join(toolDirectory, steamcmd, '..');
     core.exportVariable(STEAM_CMD, steam_cmd);
-    core.info(`${STEAM_DIR} -> ${steamDir}`);
-    core.exportVariable(STEAM_DIR, steamDir);
+    core.saveState('STEAM_CMD', steam_cmd);
+    core.info(`${STEAM_DIR} -> ${steam_dir}`);
+    core.exportVariable(STEAM_DIR, steam_dir);
+    core.saveState('STEAM_DIR', steam_dir);
     const steam_temp = path.join(process.env.RUNNER_TEMP, '.steamworks');
     try {
         await fs.promises.access(steam_temp, fs.constants.R_OK | fs.constants.W_OK);
@@ -32,8 +34,9 @@ export async function Run(): Promise<void> {
     }
     core.info(`${STEAM_TEMP} -> ${steam_temp}`);
     core.exportVariable(STEAM_TEMP, steam_temp);
+    core.saveState('STEAM_TEMP', steam_temp);
     await exec.exec(steamcmd, ['+help', '+quit']);
-    await restoreConfigCache(steamDir);
+    await restoreConfigCache(steam_dir);
 }
 
 async function findOrDownload(): Promise<[string, string]> {
