@@ -35,7 +35,7 @@ export async function Run(): Promise<void> {
     core.info(`${STEAM_TEMP} -> ${steam_temp}`);
     core.exportVariable(STEAM_TEMP, steam_temp);
     core.saveState('STEAM_TEMP', steam_temp);
-    await exec.exec(steamcmd, ['+help', '+quit']);
+    await exec.exec(steamcmd, ['+help', '+quit'], { ignoreReturnCode: true });
     await restoreConfigCache(steam_dir);
 }
 

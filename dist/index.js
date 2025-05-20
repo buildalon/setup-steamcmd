@@ -66081,13 +66081,15 @@ const IS_WINDOWS = process.platform === 'win32';
 const toolExtension = IS_WINDOWS ? '.exe' : '.sh';
 const toolPath = `${steamcmd}${toolExtension}`;
 async function Run() {
-    const [toolDirectory, steamDir] = await findOrDownload();
+    const [toolDirectory, steam_dir] = await findOrDownload();
     core.info(`${STEAM_CMD} -> ${toolDirectory}`);
     core.addPath(toolDirectory);
     const steam_cmd = path.join(toolDirectory, steamcmd, '..');
     core.exportVariable(STEAM_CMD, steam_cmd);
-    core.info(`${STEAM_DIR} -> ${steamDir}`);
-    core.exportVariable(STEAM_DIR, steamDir);
+    core.saveState('STEAM_CMD', steam_cmd);
+    core.info(`${STEAM_DIR} -> ${steam_dir}`);
+    core.exportVariable(STEAM_DIR, steam_dir);
+    core.saveState('STEAM_DIR', steam_dir);
     const steam_temp = path.join(process.env.RUNNER_TEMP, '.steamworks');
     try {
         await fs.promises.access(steam_temp, fs.constants.R_OK | fs.constants.W_OK);
@@ -66097,8 +66099,9 @@ async function Run() {
     }
     core.info(`${STEAM_TEMP} -> ${steam_temp}`);
     core.exportVariable(STEAM_TEMP, steam_temp);
-    await exec.exec(steamcmd, ['+help', '+quit']);
-    await restoreConfigCache(steamDir);
+    core.saveState('STEAM_TEMP', steam_temp);
+    await exec.exec(steamcmd, ['+help', '+quit'], { ignoreReturnCode: true });
+    await restoreConfigCache(steam_dir);
 }
 async function findOrDownload() {
     const allVersions = tc.findAllVersions(steamcmd);
@@ -79825,12 +79828,30 @@ const main = async () => {
     else {
         await (0, setup_1.SaveConfigCache)();
         core.info('steamcmd logs:');
-        await logging.PrintLogs(process.env.STEAM_TEMP);
-        if (process.platform === 'win32') {
-            await logging.PrintLogs(process.env.STEAM_CMD, true);
+        const steam_temp = core.getState('STEAM_TEMP');
+        if (!steam_temp) {
+            core.error('STEAM_TEMP is not set, skipping logs');
         }
         else {
-            await logging.PrintLogs(process.env.STEAM_DIR, true);
+            await logging.PrintLogs(steam_temp);
+        }
+        if (process.platform === 'win32') {
+            const steamCmd = core.getState('STEAM_CMD');
+            if (!steamCmd) {
+                core.error('STEAM_CMD is not set, skipping logs');
+            }
+            else {
+                await logging.PrintLogs(steamCmd, true);
+            }
+        }
+        else {
+            const steamDir = core.getState('STEAM_DIR');
+            if (!steamDir) {
+                core.error('STEAM_DIR is not set, skipping logs');
+            }
+            else {
+                await logging.PrintLogs(steamDir);
+            }
         }
     }
 };
