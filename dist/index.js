@@ -66015,7 +66015,8 @@ async function PrintLogs(directory, clear = false) {
             'Steam.AppBundle',
             'siteserverui',
             'htmlcache',
-            'localconfig.vdf'
+            'localconfig.vdf',
+            'config.vdf',
         ];
         for (const path of paths) {
             try {
