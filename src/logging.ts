@@ -11,7 +11,9 @@ export async function PrintLogs(directory: string, clear = false): Promise<void>
             'steamapps',
             'Steam.AppBundle',
             'siteserverui',
-            'htmlcache'
+            'htmlcache',
+            'localconfig.vdf',
+            'config.vdf',
         ];
         for (const path of paths) {
             try {

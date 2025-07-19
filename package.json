@@ -1,6 +1,6 @@
 {
   "name": "setup-steamcmd",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "description": "A GitHub Action to setup the steamcmd command alias.",
   "author": "buildalon",
   "repository": {
@@ -25,7 +25,7 @@
     "@actions/tool-cache": "^2.0.2"
   },
   "devDependencies": {
-    "@types/node": "^22.15.18",
+    "@types/node": "^22.16.5",
     "@vercel/ncc": "^0.34.0",
     "shx": "^0.3.4",
     "typescript": "^5.8.3"
