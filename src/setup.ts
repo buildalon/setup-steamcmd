@@ -1,5 +1,4 @@
 import tc = require('@actions/tool-cache');
-import cache = require('@actions/cache');
 import core = require('@actions/core');
 import exec = require('@actions/exec');
 import path = require('path');
@@ -36,7 +35,6 @@ export async function Run(): Promise<void> {
     core.exportVariable(STEAM_TEMP, steam_temp);
     core.saveState('STEAM_TEMP', steam_temp);
     await exec.exec(steamcmd, ['+help', '+quit'], { ignoreReturnCode: true });
-    await restoreConfigCache(steam_dir);
 }
 
 async function findOrDownload(): Promise<[string, string]> {
@@ -170,49 +168,3 @@ async function getSteamDir(toolDirectory: string): Promise<string> {
     return steamDir;
 }
 
-async function restoreConfigCache(steamDir: string): Promise<void> {
-    try {
-        const configVdfPath = path.join(steamDir, 'config', 'config.vdf');
-        const cacheKey = await cache.restoreCache([configVdfPath], `steamcmd-config-${process.platform}-${process.arch}`, [
-            `steamcmd-config-${process.platform}`,
-            `steamcmd-config`
-        ]);
-        if (cacheKey) {
-            core.info(`Restored cache: ${cacheKey}`);
-            core.saveState('steamcmd-config-cacheKey', cacheKey);
-        } else {
-            core.info(`No cache found for ${configVdfPath}`);
-        }
-    } catch (error) {
-        core.error(`Failed to restore cache: ${error.message}`);
-    }
-}
-
-export async function SaveConfigCache(): Promise<void> {
-    if (!process.env.STEAM_DIR) {
-        core.warning('STEAM_DIR is not set, skipping cache save');
-        return;
-    }
-    let cacheKey = core.getState('steamcmd-config-cacheKey');
-    if (cacheKey) {
-        core.info(`cache for "${cacheKey}" already exists, skipping cache save`);
-        return;
-    }
-    try {
-        const configVdfPath = path.join(process.env.STEAM_DIR, 'config', 'config.vdf');
-        try {
-            await fs.promises.access(configVdfPath, fs.constants.R_OK | fs.constants.W_OK);
-        } catch (error) {
-            core.warning(`Cache path ${configVdfPath} does not exist, skipping cache save`);
-            return;
-        }
-        const cacheId = await cache.saveCache([configVdfPath], `steamcmd-config-${process.platform}-${process.arch}`);
-        if (cacheId) {
-            core.info(`Saved cacheId: ${cacheId}`);
-        } else {
-            core.info(`No cache saved for ${configVdfPath}`);
-        }
-    } catch (error) {
-        core.error(`Failed to save cache: ${error.message}`);
-    }
-}
