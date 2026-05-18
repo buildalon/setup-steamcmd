@@ -1,9 +1,10 @@
-name: Buildalon Setup SteamCmd
-description: A GitHub Action to setup the steamcmd command alias.
+name: 'Buildalon Setup SteamCmd'
+description: 'A GitHub Action to setup the steamcmd command alias.'
 branding:
   color: 'red'
   icon: 'terminal'
+inputs: {}
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'
   post: 'dist/index.js'
