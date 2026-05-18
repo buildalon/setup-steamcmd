@@ -20,7 +20,7 @@ jobs:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: buildalon/setup-steamcmd
         uses: ./
       - run: |
