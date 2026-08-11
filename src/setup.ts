@@ -89,30 +89,30 @@ async function findOrDownload(): Promise<[string, string]> {
         await fs.promises.writeFile(exe, `#!/bin/bash\nexec "${tool}" "$@"`);
         await fs.promises.chmod(exe, 0o777);
         await fs.promises.access(exe, fs.constants.X_OK);
-        // steamcmd self-updates on first launch, after which steamcmd.sh
-        // re-execs "${STEAMROOT}/linux/steamcmd" -- but the binary stays under
-        // "linux32/". Mirror linux32 -> linux next to steamcmd.sh so the
-        // re-exec resolves instead of failing with "Couldn't find steamcmd at
-        // .../linux/steamcmd".
-        const steamRoot = path.dirname(tool);
-        const linux32Dir = path.join(steamRoot, 'linux32');
-        const linuxDir = path.join(steamRoot, 'linux');
+    }
+    // steamcmd self-updates on first launch, after which steamcmd.sh
+    // re-execs "${STEAMROOT}/linux/steamcmd" -- but the binary stays under
+    // "linux32/". Mirror linux32 -> linux next to steamcmd.sh so the
+    // re-exec resolves instead of failing with "Couldn't find steamcmd at
+    // .../linux/steamcmd".
+    const steamRoot = path.dirname(tool);
+    const linux32Dir = path.join(steamRoot, 'linux32');
+    const linuxDir = path.join(steamRoot, 'linux');
+    try {
+        await fs.promises.access(linux32Dir);
         try {
-            await fs.promises.access(linux32Dir);
-            try {
-                await fs.promises.access(linuxDir);
-            } catch (error) {
-                if (error.code === 'ENOENT') {
-                    await fs.promises.symlink(linux32Dir, linuxDir, 'dir');
-                    core.debug(`Linked ${linuxDir} -> ${linux32Dir}`);
-                } else {
-                    throw error;
-                }
-            }
+            await fs.promises.access(linuxDir);
         } catch (error) {
-            if (error.code !== 'ENOENT') {
+            if (error.code === 'ENOENT') {
+                await fs.promises.symlink(linux32Dir, linuxDir, 'dir');
+                core.debug(`Linked ${linuxDir} -> ${linux32Dir}`);
+            } else {
                 throw error;
             }
+        }
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            throw error;
         }
     }
     await fs.promises.access(tool, fs.constants.X_OK);
