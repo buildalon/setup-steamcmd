@@ -9,7 +9,7 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.ref }}
 jobs:
   validate:
     runs-on: ${{ matrix.os }}
@@ -22,8 +22,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: buildalon/setup-steamcmd
+        id: setup-steamcmd
         uses: ./
       - run: |
+          echo "path: ${{ steps.setup-steamcmd.outputs.path }}"
+          echo "version: ${{ steps.setup-steamcmd.outputs.version }}"
+          test -f "${{ steps.setup-steamcmd.outputs.path }}"
           echo "STEAM_CMD: $STEAM_CMD"
           echo "STEAM_DIR: $STEAM_DIR"
           which steamcmd > /dev/null
