@@ -1,10 +1,10 @@
 import tc = require('@actions/tool-cache');
-import cache = require('@actions/cache');
 import core = require('@actions/core');
 import exec = require('@actions/exec');
 import path = require('path');
 import fs = require('fs');
 import os = require('os');
+import crypto = require('crypto');
 
 const steamcmd = 'steamcmd';
 const STEAM_CMD = 'STEAM_CMD';
@@ -17,7 +17,7 @@ const toolExtension = IS_WINDOWS ? '.exe' : '.sh';
 const toolPath = `${steamcmd}${toolExtension}`;
 
 export async function Run(): Promise<void> {
-    const [toolDirectory, steam_dir] = await findOrDownload();
+    const [toolDirectory, steam_dir, version] = await findOrDownload();
     core.info(`${STEAM_CMD} -> ${toolDirectory}`);
     core.addPath(toolDirectory);
     const steam_cmd = path.join(toolDirectory, steamcmd, '..');
@@ -35,27 +35,29 @@ export async function Run(): Promise<void> {
     core.info(`${STEAM_TEMP} -> ${steam_temp}`);
     core.exportVariable(STEAM_TEMP, steam_temp);
     core.saveState('STEAM_TEMP', steam_temp);
+    core.setOutput('path', path.join(toolDirectory, IS_LINUX ? steamcmd : toolPath));
+    core.setOutput('version', version);
     await exec.exec(steamcmd, ['+help', '+quit'], { ignoreReturnCode: true });
-    await restoreConfigCache(steam_dir);
 }
 
-async function findOrDownload(): Promise<[string, string]> {
+async function findOrDownload(): Promise<[string, string, string]> {
     const allVersions = tc.findAllVersions(steamcmd);
     core.debug(`Found versions: ${allVersions}`);
     let toolDirectory = undefined;
     if (allVersions && allVersions.length > 0) {
-        const latest = allVersions.sort().pop();
-        toolDirectory = tc.find(steamcmd, latest);
+        // '*' resolves to the highest cached semver
+        toolDirectory = tc.find(steamcmd, '*');
     }
     let tool = undefined;
     if (!toolDirectory) {
         const [url, archiveName] = getDownloadUrl();
-        const archiveDownloadPath = path.join(getTempDirectory(), archiveName);
+        const tempDirectory = path.join(getTempDirectory(), `${steamcmd}-${crypto.randomUUID()}`);
+        const archiveDownloadPath = path.join(tempDirectory, archiveName);
         core.debug(`Attempting to download ${steamcmd} from ${url} to ${archiveDownloadPath}`);
         const archivePath = await tc.downloadTool(url, archiveDownloadPath);
         core.debug(`Successfully downloaded ${steamcmd} to ${archivePath}`);
         core.debug(`Extracting ${steamcmd} from ${archivePath}`);
-        let downloadDirectory = path.join(getTempDirectory(), steamcmd);
+        let downloadDirectory = path.join(tempDirectory, steamcmd);
         if (IS_WINDOWS) {
             downloadDirectory = await tc.extractZip(archivePath, downloadDirectory);
         } else {
@@ -64,11 +66,11 @@ async function findOrDownload(): Promise<[string, string]> {
         if (!downloadDirectory) {
             throw new Error(`Failed to extract ${steamcmd} from ${archivePath}`);
         }
-        if (IS_LINUX || IS_MAC) {
-            await exec.exec(`chmod +x ${downloadDirectory}`);
-        }
         core.debug(`Successfully extracted ${steamcmd} to ${downloadDirectory}`);
         tool = path.join(downloadDirectory, toolPath);
+        if (IS_LINUX || IS_MAC) {
+            await fs.promises.chmod(tool, 0o755);
+        }
         const downloadVersion = await getVersion(tool);
         core.debug(`Setting tool cache: ${downloadDirectory} | ${steamcmd} | ${downloadVersion}`);
         toolDirectory = await tc.cacheDir(downloadDirectory, steamcmd, downloadVersion);
@@ -89,36 +91,39 @@ async function findOrDownload(): Promise<[string, string]> {
         await fs.promises.writeFile(exe, `#!/bin/bash\nexec "${tool}" "$@"`);
         await fs.promises.chmod(exe, 0o777);
         await fs.promises.access(exe, fs.constants.X_OK);
-        // steamcmd self-updates on first launch, after which steamcmd.sh
-        // re-execs "${STEAMROOT}/linux/steamcmd" -- but the binary stays under
-        // "linux32/". Mirror linux32 -> linux next to steamcmd.sh so the
-        // re-exec resolves instead of failing with "Couldn't find steamcmd at
-        // .../linux/steamcmd".
-        const steamRoot = path.dirname(tool);
-        const linux32Dir = path.join(steamRoot, 'linux32');
-        const linuxDir = path.join(steamRoot, 'linux');
+    }
+    // steamcmd self-updates on first launch, after which steamcmd.sh
+    // re-execs "${STEAMROOT}/linux/steamcmd" -- but the binary stays under
+    // "linux32/". Mirror linux32 -> linux next to steamcmd.sh so the
+    // re-exec resolves instead of failing with "Couldn't find steamcmd at
+    // .../linux/steamcmd".
+    const steamRoot = path.dirname(tool);
+    const linux32Dir = path.join(steamRoot, 'linux32');
+    const linuxDir = path.join(steamRoot, 'linux');
+    try {
+        await fs.promises.access(linux32Dir);
         try {
-            await fs.promises.access(linux32Dir);
-            try {
-                await fs.promises.access(linuxDir);
-            } catch (error) {
-                if (error.code === 'ENOENT') {
-                    await fs.promises.symlink(linux32Dir, linuxDir, 'dir');
-                    core.debug(`Linked ${linuxDir} -> ${linux32Dir}`);
-                } else {
-                    throw error;
-                }
-            }
+            await fs.promises.access(linuxDir);
         } catch (error) {
-            if (error.code !== 'ENOENT') {
+            if (error.code === 'ENOENT') {
+                await fs.promises.symlink(linux32Dir, linuxDir, 'dir');
+                core.debug(`Linked ${linuxDir} -> ${linux32Dir}`);
+            } else {
                 throw error;
             }
+        }
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            throw error;
         }
     }
     await fs.promises.access(tool, fs.constants.X_OK);
     core.debug(`Found ${tool} in ${toolDirectory}`);
     const steamDir = await getSteamDir(toolDirectory);
-    return [toolDirectory, steamDir];
+    // query the executable: steamcmd self-updates in place, so the cache
+    // directory name can lag behind the installed client version
+    const version = await getVersion(tool);
+    return [toolDirectory, steamDir, version];
 }
 
 function getDownloadUrl(): [string, string] {
@@ -146,7 +151,7 @@ function getTempDirectory(): string {
 
 async function getVersion(tool: string): Promise<string> {
     let output = '';
-    await exec.exec(tool, [`+quit`], {
+    await exec.exec(`"${tool}"`, [`+quit`], {
         listeners: {
             stdout: (data) => {
                 output += data.toString();
@@ -193,51 +198,4 @@ async function getSteamDir(toolDirectory: string): Promise<string> {
     }
     core.debug(`Steam directory: ${steamDir}`);
     return steamDir;
-}
-
-async function restoreConfigCache(steamDir: string): Promise<void> {
-    try {
-        const configVdfPath = path.join(steamDir, 'config', 'config.vdf');
-        const cacheKey = await cache.restoreCache([configVdfPath], `steamcmd-config-${process.platform}-${process.arch}`, [
-            `steamcmd-config-${process.platform}`,
-            `steamcmd-config`
-        ]);
-        if (cacheKey) {
-            core.info(`Restored cache: ${cacheKey}`);
-            core.saveState('steamcmd-config-cacheKey', cacheKey);
-        } else {
-            core.info(`No cache found for ${configVdfPath}`);
-        }
-    } catch (error) {
-        core.error(`Failed to restore cache: ${error.message}`);
-    }
-}
-
-export async function SaveConfigCache(): Promise<void> {
-    if (!process.env.STEAM_DIR) {
-        core.warning('STEAM_DIR is not set, skipping cache save');
-        return;
-    }
-    let cacheKey = core.getState('steamcmd-config-cacheKey');
-    if (cacheKey) {
-        core.info(`cache for "${cacheKey}" already exists, skipping cache save`);
-        return;
-    }
-    try {
-        const configVdfPath = path.join(process.env.STEAM_DIR, 'config', 'config.vdf');
-        try {
-            await fs.promises.access(configVdfPath, fs.constants.R_OK | fs.constants.W_OK);
-        } catch (error) {
-            core.warning(`Cache path ${configVdfPath} does not exist, skipping cache save`);
-            return;
-        }
-        const cacheId = await cache.saveCache([configVdfPath], `steamcmd-config-${process.platform}-${process.arch}`);
-        if (cacheId) {
-            core.info(`Saved cacheId: ${cacheId}`);
-        } else {
-            core.info(`No cache saved for ${configVdfPath}`);
-        }
-    } catch (error) {
-        core.error(`Failed to save cache: ${error.message}`);
-    }
 }

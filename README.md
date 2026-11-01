@@ -16,7 +16,7 @@ jobs:
 
     steps:
       # download and setup the steamcmd
-      - uses: buildalon/setup-steamcmd@v1
+      - uses: buildalon/setup-steamcmd@v2
       # run commands
       - run: |
           which steamcmd
@@ -27,9 +27,16 @@ For a full list of `steamcmd` commands see [this list](https://github.com/dgibbs
 
 ## outputs
 
+- `path` the full path to the `steamcmd` executable.
+- `version` the installed `steamcmd` version.
+
 ### environment variables
 
 - `STEAM_CMD` the `steamcmd` directory location.
 - `STEAM_DIR` the steam install directory location.
 - `STEAM_TEMP` the temp steam directory location.
+
+### post step
+
+The post step prints the steamcmd logs from `STEAM_TEMP` and the steam directory, and clears the steamcmd logs on Windows.
 
