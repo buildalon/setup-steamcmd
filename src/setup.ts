@@ -74,9 +74,9 @@ async function findOrDownload(): Promise<[string, string, string]> {
         const downloadVersion = await getVersion(tool);
         core.debug(`Setting tool cache: ${downloadDirectory} | ${steamcmd} | ${downloadVersion}`);
         toolDirectory = await tc.cacheDir(downloadDirectory, steamcmd, downloadVersion);
-    } else {
-        tool = path.join(toolDirectory, toolPath);
     }
+    // the cached copy, not the temp download, so the wrapper, the linux symlink and the version query all use it
+    tool = path.join(toolDirectory, toolPath);
     if (IS_LINUX) {
         const exe = path.join(toolDirectory, steamcmd);
         core.debug(`Creating ${exe} to point to ${tool}`);

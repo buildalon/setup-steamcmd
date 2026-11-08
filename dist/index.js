@@ -34437,9 +34437,7 @@ async function findOrDownload() {
         core.debug(`Setting tool cache: ${downloadDirectory} | ${steamcmd} | ${downloadVersion}`);
         toolDirectory = await tc.cacheDir(downloadDirectory, steamcmd, downloadVersion);
     }
-    else {
-        tool = path.join(toolDirectory, toolPath);
-    }
+    tool = path.join(toolDirectory, toolPath);
     if (IS_LINUX) {
         const exe = path.join(toolDirectory, steamcmd);
         core.debug(`Creating ${exe} to point to ${tool}`);

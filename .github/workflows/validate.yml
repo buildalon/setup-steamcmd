@@ -11,7 +11,15 @@ on:
 concurrency:
   group: ${{ github.ref }}
 jobs:
+  changes:
+    permissions:
+      contents: read
+      pull-requests: read
+    # docs-only pull requests skip validation; validate-result still reports for them
+    uses: RageAgainstThePixel/workflows/.github/workflows/detect-changes.yml@main
   validate:
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' }}
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -20,7 +28,7 @@ jobs:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: buildalon/setup-steamcmd
         id: setup-steamcmd
         uses: ./
@@ -33,3 +41,23 @@ jobs:
           which steamcmd > /dev/null
           steamcmd +login anonymous +help +quit
         shell: bash
+  # the one required check: passes when every job passed or was skipped for a docs-only change
+  validate-result:
+    needs: [changes, validate]
+    if: always()
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Check results
+        shell: bash
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: ${RESULTS}"
+          for result in ${RESULTS}; do
+            case "${result}" in
+              success|skipped) ;;
+              *) exit 1 ;;
+            esac
+          done
