@@ -1,10 +1,10 @@
-import tc = require('@actions/tool-cache');
-import core = require('@actions/core');
-import exec = require('@actions/exec');
-import path = require('path');
-import fs = require('fs');
-import os = require('os');
-import crypto = require('crypto');
+import * as tc from '@actions/tool-cache';
+import * as core from '@actions/core';
+import * as exec from '@actions/exec';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as crypto from 'crypto';
 
 const steamcmd = 'steamcmd';
 const STEAM_CMD = 'STEAM_CMD';
@@ -74,9 +74,9 @@ async function findOrDownload(): Promise<[string, string, string]> {
         const downloadVersion = await getVersion(tool);
         core.debug(`Setting tool cache: ${downloadDirectory} | ${steamcmd} | ${downloadVersion}`);
         toolDirectory = await tc.cacheDir(downloadDirectory, steamcmd, downloadVersion);
-    } else {
-        tool = path.join(toolDirectory, toolPath);
     }
+    // the cached copy, not the temp download, so the wrapper, the linux symlink and the version query all use it
+    tool = path.join(toolDirectory, toolPath);
     if (IS_LINUX) {
         const exe = path.join(toolDirectory, steamcmd);
         core.debug(`Creating ${exe} to point to ${tool}`);

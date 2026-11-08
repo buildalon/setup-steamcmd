@@ -1,6 +1,6 @@
-import core = require('@actions/core');
-import logging = require('./logging');
-import setup = require('./setup');
+import * as core from '@actions/core';
+import * as logging from './logging';
+import * as setup from './setup';
 
 const IsPost = !!core.getState('isPost');
 

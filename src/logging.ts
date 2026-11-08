@@ -1,5 +1,5 @@
-import core = require('@actions/core');
-import fs = require('fs');
+import * as core from '@actions/core';
+import * as fs from 'fs';
 
 export async function PrintLogs(directory: string, clear = false): Promise<void> {
     core.info(directory);
