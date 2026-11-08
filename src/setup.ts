@@ -1,10 +1,10 @@
-import tc = require('@actions/tool-cache');
-import core = require('@actions/core');
-import exec = require('@actions/exec');
-import path = require('path');
-import fs = require('fs');
-import os = require('os');
-import crypto = require('crypto');
+import * as tc from '@actions/tool-cache';
+import * as core from '@actions/core';
+import * as exec from '@actions/exec';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as crypto from 'crypto';
 
 const steamcmd = 'steamcmd';
 const STEAM_CMD = 'STEAM_CMD';

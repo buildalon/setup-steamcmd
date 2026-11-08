@@ -19,15 +19,15 @@
     "actions"
   ],
   "dependencies": {
-    "@actions/core": "^1.11.1",
-    "@actions/exec": "^1.1.1",
-    "@actions/tool-cache": "^2.0.2"
+    "@actions/core": "^3.0.1",
+    "@actions/exec": "^3.0.0",
+    "@actions/tool-cache": "^4.0.0"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3",
-    "@vercel/ncc": "^0.34.0",
+    "@types/node": "^24.19.2",
+    "@vercel/ncc": "^0.45.0",
     "shx": "^0.4.0",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "scripts": {
     "build": "npm run clean && npm run bundle",
